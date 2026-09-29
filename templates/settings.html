@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Settings & Configuration — Personal Finance Advisor Bot{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">System Settings & Data Control</h2>
+        <p class="text-muted mb-0 small">Manage financial modes, demo data tools, and AI configurations</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Demo Data & Quick Mode Switcher -->
+    <div class="col-lg-6">
+        <!-- Demo Mode Seeder -->
+        <div class="fin-card p-4 mb-4 border-success border-opacity-50">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div class="brand-icon"><i class="bi bi-magic"></i></div>
+                <div>
+                    <h5 class="fw-bold mb-0">Project Demonstration & Sample Data</h5>
+                    <span class="text-muted small">One-click realistic dataset for testing and presentations</span>
+                </div>
+            </div>
+            <p class="text-muted small">
+                If you are presenting this project or testing features, click the button below to automatically populate realistic income streams, daily expenses, category budget limits, and active savings goals tailored to your chosen financial mode.
+            </p>
+            <div class="d-flex gap-2">
+                <form action="{{ url_for('auth.seed_demo_data') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary-fin btn-sm">
+                        <i class="bi bi-database-fill-add me-1"></i> Load Realistic Demo Data
+                    </button>
+                </form>
+                <form action="{{ url_for('auth.clear_demo_data') }}" method="POST" onsubmit="return confirm('Warning: This will delete all your transactions, budgets, and savings goals. Proceed?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-trash3 me-1"></i> Clear All Data
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Mode Configuration -->
+        <div class="fin-card p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-toggles me-2 text-primary"></i>Active Financial Engine Mode</h5>
+            <p class="text-muted small mb-3">
+                Switching modes adjusts your budget formulas, dashboard widgets, and AI advisory focus:
+            </p>
+
+            <div class="list-group">
+                <form action="{{ url_for('dashboard.switch_mode', mode='standard') }}" method="POST" class="w-100">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 {% if current_user.financial_mode == 'standard' %}border-primary bg-light{% endif %}">
+                        <div>
+                            <div class="fw-bold"><i class="bi bi-briefcase me-2 text-primary"></i>Standard Mode</div>
+                            <div class="text-muted small">Balanced 50/30/20 framework with category limits.</div>
+                        </div>
+                        {% if current_user.financial_mode == 'standard' %}<span class="badge bg-primary">Active</span>{% endif %}
+                    </button>
+                </form>
+
+                <form action="{{ url_for('dashboard.switch_mode', mode='student') }}" method="POST" class="w-100 mt-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 {% if current_user.financial_mode == 'student' %}border-warning bg-light{% endif %}">
+                        <div>
+                            <div class="fw-bold"><i class="bi bi-mortarboard me-2 text-warning"></i>College Student Mode</div>
+                            <div class="text-muted small">Weekly allowance breakdown, campus food & transit limits.</div>
+                        </div>
+                        {% if current_user.financial_mode == 'student' %}<span class="badge bg-warning text-dark">Active</span>{% endif %}
+                    </button>
+                </form>
+
+                <form action="{{ url_for('dashboard.switch_mode', mode='freelancer') }}" method="POST" class="w-100 mt-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 {% if current_user.financial_mode == 'freelancer' %}border-purple bg-light{% endif %}">
+                        <div>
+                            <div class="fw-bold"><i class="bi bi-laptop me-2 text-purple"></i>Freelancer Mode</div>
+                            <div class="text-muted small">Variable income management, tax buffers & deductible costs.</div>
+                        </div>
+                        {% if current_user.financial_mode == 'freelancer' %}<span class="badge bg-purple text-dark border">Active</span>{% endif %}
+                    </button>
+                </form>
+
+                <form action="{{ url_for('dashboard.switch_mode', mode='household') }}" method="POST" class="w-100 mt-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 {% if current_user.financial_mode == 'household' %}border-success bg-light{% endif %}">
+                        <div>
+                            <div class="fw-bold"><i class="bi bi-house-door me-2 text-success"></i>Household Mode</div>
+                            <div class="text-muted small">Family grocery bills, utilities, and joint savings targets.</div>
+                        </div>
+                        {% if current_user.financial_mode == 'household' %}<span class="badge bg-success">Active</span>{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: AI Configuration & Tech Specs -->
+    <div class="col-lg-6">
+        <!-- Gemini AI Setup Card -->
+        <div class="fin-card p-4 mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-stars me-2 text-warning"></i>Google Gemini AI Integration</h5>
+            <p class="text-muted small">
+                The application uses the official <strong>google-genai</strong> Python SDK to generate conversational insights and budget plans.
+            </p>
+
+            <div class="p-3 bg-light rounded-3 mb-3 small">
+                <div class="fw-semibold text-dark mb-1">To connect a live Google Gemini API Key:</div>
+                <ol class="mb-2 ps-3 text-muted">
+                    <li>Get a free Gemini API key from <a href="https://aistudio.google.com/" target="_blank" class="fw-bold text-success">Google AI Studio</a>.</li>
+                    <li>Open the <code>.env</code> file in the project root directory.</li>
+                    <li>Set <code>GEMINI_API_KEY=your_actual_api_key_here</code>.</li>
+                    <li>Restart the Flask server.</li>
+                </ol>
+            </div>
+
+            <div class="alert alert-info py-2 px-3 small mb-0">
+                <i class="bi bi-info-circle me-1"></i> <strong>Zero-Setup Guarantee:</strong> If no API key is provided, the application automatically engages its built-in rule-based financial advisory engine with 100% functionality!
+            </div>
+        </div>
+
+        <!-- System Architecture Card -->
+        <div class="fin-card p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-cpu me-2 text-primary"></i>System Architecture Specifications</h5>
+            <table class="table table-sm small mb-0">
+                <tbody>
+                    <tr>
+                        <td class="text-muted">Backend Framework</td>
+                        <td class="fw-semibold">Python 3.9+ / Flask 3.1</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Database Engine</td>
+                        <td class="fw-semibold">SQLite (instance/finance.db) via SQLAlchemy ORM</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Authentication</td>
+                        <td class="fw-semibold">Flask-Login with Werkzeug Password Hashing</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Frontend Stack</td>
+                        <td class="fw-semibold">Bootstrap 5, Chart.js, Vanilla CSS & JS</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Security</td>
+                        <td class="fw-semibold">CSRF Protection (Flask-WTF), Session Isolation</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

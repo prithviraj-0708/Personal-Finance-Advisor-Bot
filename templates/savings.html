@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Savings Goals — Personal Finance Advisor Bot{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Savings Goals</h2>
+        <p class="text-muted mb-0 small">Build emergency funds, save for milestones, and track required monthly pacing</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('reports.export_savings') }}" class="btn btn-outline-fin btn-sm">
+            <i class="bi bi-download me-1"></i> Export Goals CSV
+        </a>
+        <button class="btn btn-primary-fin btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addGoalModal">
+            <i class="bi bi-plus-lg me-1"></i> New Savings Goal
+        </button>
+    </div>
+</div>
+
+<!-- Savings Metric Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <div class="stat-header">
+                <span class="stat-title">Total Saved So Far</span>
+                <div class="stat-icon green"><i class="bi bi-piggy-bank-fill"></i></div>
+            </div>
+            <div class="stat-value text-success">{{ current_user.currency }}{{ "%.2f"|format(total_saved) }}</div>
+            <div class="stat-subtext text-muted">Across {{ goals|length }} active goal{{ 's' if goals|length != 1 else '' }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <div class="stat-header">
+                <span class="stat-title">Aggregate Target</span>
+                <div class="stat-icon blue"><i class="bi bi-bullseye"></i></div>
+            </div>
+            <div class="stat-value text-dark">{{ current_user.currency }}{{ "%.2f"|format(total_target) }}</div>
+            <div class="stat-subtext text-muted">Combined Target Milestone</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <div class="stat-header">
+                <span class="stat-title">Overall Progress</span>
+                <div class="stat-icon purple"><i class="bi bi-percent"></i></div>
+            </div>
+            <div class="stat-value text-purple">{{ total_progress }}%</div>
+            <div class="progress-modern mt-2">
+                <div class="progress-bar-fin bg-success" style="width: {{ total_progress }}%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Goals Cards Grid -->
+<div class="row g-4">
+    {% for g in goals %}
+    <div class="col-md-6 col-lg-4">
+        <div class="fin-card h-100 d-flex flex-column justify-content-between p-4">
+            <div>
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="fw-bold text-dark mb-0">{{ g.name }}</h5>
+                    <span class="badge {% if g.progress_percentage >= 100 %}bg-success{% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %}">
+                        {{ g.progress_percentage }}%
+                    </span>
+                </div>
+                {% if g.description %}
+                <p class="text-muted small mb-3">{{ g.description }}</p>
+                {% endif %}
+
+                <!-- Progress Bar -->
+                <div class="progress-modern mb-3" style="height: 10px;">
+                    <div class="progress-bar-fin {% if g.progress_percentage >= 100 %}bg-success{% else %}bg-primary{% endif %}" style="width: {{ g.progress_percentage }}%; height: 100%;"></div>
+                </div>
+
+                <!-- Financial Stats -->
+                <div class="p-3 bg-light rounded-3 mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Saved Amount:</span>
+                        <strong class="text-success">{{ current_user.currency }}{{ "%.2f"|format(g.current_amount) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Target Amount:</span>
+                        <strong>{{ current_user.currency }}{{ "%.2f"|format(g.target_amount) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Remaining:</span>
+                        <strong class="text-danger">{{ current_user.currency }}{{ "%.2f"|format(g.remaining_amount) }}</strong>
+                    </div>
+                    <div class="border-top pt-2 mt-2 d-flex justify-content-between small">
+                        <span class="text-muted"><i class="bi bi-calendar3 me-1"></i>Target Date:</span>
+                        <span>{{ g.target_date.strftime('%d %b %Y') }} ({{ g.months_remaining }} mo)</span>
+                    </div>
+                    <div class="d-flex justify-content-between small mt-1">
+                        <span class="text-muted"><i class="bi bi-speedometer me-1"></i>Required / Month:</span>
+                        <strong class="text-primary">{{ current_user.currency }}{{ "%.2f"|format(g.monthly_required) }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Actions -->
+            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                <button class="btn btn-sm btn-primary-fin py-1 px-3" type="button" data-bs-toggle="modal" data-bs-target="#depositModal-{{ g.id }}">
+                    <i class="bi bi-plus-circle me-1"></i> Deposit
+                </button>
+                <div class="d-flex gap-1">
+                    <a href="{{ url_for('savings.edit', id=g.id) }}" class="btn btn-sm btn-light border p-1" title="Edit Goal"><i class="bi bi-pencil"></i></a>
+                    <form action="{{ url_for('savings.delete', id=g.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this savings goal?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-light border p-1 text-danger" title="Delete Goal"><i class="bi bi-trash"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deposit Contribution Modal for this Goal -->
+    <div class="modal fade" id="depositModal-{{ g.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom">
+                    <h6 class="modal-title fw-bold">Deposit to {{ g.name }}</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url_for('savings.contribute', id=g.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-body p-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Contribution Amount ({{ current_user.currency }})</label>
+                            <input type="number" name="amount" class="form-control form-control-lg" placeholder="0.00" step="0.01" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Date</label>
+                            <input type="date" name="date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Note / Source</label>
+                            <input type="text" name="description" class="form-control" placeholder="e.g. Monthly surplus allocation">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary-fin btn-sm">Confirm Deposit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="col-12">
+        <div class="fin-card p-5 text-center text-muted">
+            <i class="bi bi-piggy-bank fs-1 d-block mb-3 text-secondary"></i>
+            <h5 class="fw-bold text-dark">No Savings Goals Configured</h5>
+            <p class="small text-muted mb-3">Create targeted goals like an Emergency Fund, New Laptop, or College Expenses to automatically track monthly savings pacing.</p>
+            <button class="btn btn-primary-fin btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addGoalModal">
+                <i class="bi bi-plus-lg me-1"></i> Create First Goal
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal: Add Savings Goal -->
+<div class="modal fade" id="addGoalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">New Savings Goal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('savings.add') }}" method="POST">
+                {{ goal_form.hidden_tag() }}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Goal Name</label>
+                        {{ goal_form.name(class="form-control", placeholder="e.g., Emergency Fund, New Laptop, Travel") }}
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Target Amount ({{ current_user.currency }})</label>
+                            {{ goal_form.target_amount(class="form-control", placeholder="e.g., 50000", step="1", required=True) }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Initial Saved Amount</label>
+                            {{ goal_form.current_amount(class="form-control", placeholder="0.00", step="0.01") }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Target Completion Date</label>
+                        {{ goal_form.target_date(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description / Purpose</label>
+                        {{ goal_form.description(class="form-control", rows="2", placeholder="What are you saving for?") }}
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-fin btn-sm">Create Goal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

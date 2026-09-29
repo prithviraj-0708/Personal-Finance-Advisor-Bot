@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}AI Financial Advisor — Personal Finance Advisor Bot{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">AI Financial Advisor</h2>
+        <p class="text-muted mb-0 small">
+            Powered by Google Gemini AI with grounded financial analytics and instant rule-based fallback
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        {% if is_api_connected %}
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+            <i class="bi bi-patch-check-fill me-1"></i> Gemini API Connected
+        </span>
+        {% else %}
+        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-2" title="No Gemini API Key set in .env; running in robust rule-based mode">
+            <i class="bi bi-shield-check me-1"></i> Rule-Based Fallback Engine Active
+        </span>
+        {% endif %}
+        <form action="{{ url_for('ai_advisor.clear_history') }}" method="POST" class="d-inline" onsubmit="return confirm('Clear your chat history with the advisor?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-fin btn-sm" title="Clear Chat History">
+                <i class="bi bi-arrow-clockwise me-1"></i> Reset Chat
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Navigation Tabs -->
+<ul class="nav nav-pills mb-4 gap-2" id="aiTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active rounded-pill px-4 fw-semibold" id="chat-tab" data-bs-toggle="pill" data-bs-target="#tab-chat" type="button" role="tab">
+            <i class="bi bi-chat-dots-fill me-1"></i> Conversational Chatbot
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill px-4 fw-semibold" id="budget-tab" data-bs-toggle="pill" data-bs-target="#tab-budget" type="button" role="tab">
+            <i class="bi bi-sliders me-1"></i> Budget Recommendations
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill px-4 fw-semibold" id="spending-tab" data-bs-toggle="pill" data-bs-target="#tab-spending" type="button" role="tab">
+            <i class="bi bi-search me-1"></i> Spending Forensic Analysis
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill px-4 fw-semibold" id="savings-tab" data-bs-toggle="pill" data-bs-target="#tab-savings" type="button" role="tab">
+            <i class="bi bi-piggy-bank me-1"></i> Savings Strategy
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill px-4 fw-semibold" id="health-tab" data-bs-toggle="pill" data-bs-target="#tab-health" type="button" role="tab">
+            <i class="bi bi-heart-pulse me-1"></i> Financial Health Report Card
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="aiTabContent">
+    <!-- TAB 1: CONVERSATIONAL CHATBOT -->
+    <div class="tab-pane fade show active" id="tab-chat" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="ai-chat-container shadow-sm">
+                    <!-- Message Log -->
+                    <div class="ai-chat-messages" id="chatMessages">
+                        <!-- Welcome message -->
+                        <div class="chat-bubble assistant">
+                            <div>
+                                👋 Hello <strong>{{ current_user.name }}</strong>! I am your <strong>Personal Finance Advisor Bot</strong>.
+                                <br><br>
+                                I have live access to your financial records for <strong>{{ metrics.month_name }}</strong>:
+                                <ul class="mb-2 mt-1 ps-3">
+                                    <li>Current Monthly Income: <strong>{{ current_user.currency }}{{ "%.2f"|format(metrics.total_income) }}</strong></li>
+                                    <li>Total Expenses: <strong>{{ current_user.currency }}{{ "%.2f"|format(metrics.total_expenses) }}</strong></li>
+                                    <li>Current Net Savings: <strong>{{ current_user.currency }}{{ "%.2f"|format(metrics.net_savings) }}</strong></li>
+                                </ul>
+                                Feel free to ask me anything about your spending, budget status, or how to save more!
+                            </div>
+                        </div>
+
+                        <!-- Render persisted database history -->
+                        {% for conv in chat_history %}
+                        <div class="chat-bubble user">
+                            <div>{{ conv.message }}</div>
+                        </div>
+                        <div class="chat-bubble assistant">
+                            {% if conv.is_fallback %}
+                            <div class="fallback-badge"><i class="bi bi-shield-check me-1"></i>Rule-Based Local Advisor</div>
+                            {% endif %}
+                            <div style="white-space: pre-line;">{{ conv.response }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Input Bar -->
+                    <form class="chat-input-bar" id="chatForm">
+                        <input type="text" id="chatInput" class="form-control" placeholder="Ask a question about your finances..." autocomplete="off" required>
+                        <button type="submit" id="sendBtn" class="btn btn-primary-fin px-4">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Question Prompts Sidebar -->
+            <div class="col-lg-4">
+                <div class="fin-card p-4 h-100">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-lightbulb-fill text-warning me-2"></i>Suggested Questions</h6>
+                    <p class="text-muted small mb-3">Click any question below to immediately ask the financial advisor:</p>
+                    
+                    <div class="d-flex flex-column gap-2">
+                        <button type="button" class="btn btn-light border text-start p-2 rounded small quick-prompt-btn" data-prompt="How much did I spend this month?">
+                            <i class="bi bi-arrow-right-short text-success"></i> How much did I spend this month?
+                        </button>
+                        <button type="button" class="btn btn-light border text-start p-2 rounded small quick-prompt-btn" data-prompt="Where is most of my money going?">
+                            <i class="bi bi-arrow-right-short text-success"></i> Where is most of my money going?
+                        </button>
+                        <button type="button" class="btn btn-light border text-start p-2 rounded small quick-prompt-btn" data-prompt="How can I save ₹2,000 next month?">
+                            <i class="bi bi-arrow-right-short text-success"></i> How can I save {{ current_user.currency }}2,000 next month?
+                        </button>
+                        <button type="button" class="btn btn-light border text-start p-2 rounded small quick-prompt-btn" data-prompt="How much did I spend on food?">
+                            <i class="bi bi-arrow-right-short text-success"></i> How much did I spend on food?
+                        </button>
+                        <button type="button" class="btn btn-light border text-start p-2 rounded small quick-prompt-btn" data-prompt="What is my budget status?">
+                            <i class="bi bi-arrow-right-short text-success"></i> What is my budget status?
+                        </button>
+                        {% if current_user.financial_mode == 'student' %}
+                        <button type="button" class="btn btn-light border text-start p-2 rounded small quick-prompt-btn" data-prompt="How can I manage my monthly allowance?">
+                            <i class="bi bi-arrow-right-short text-warning"></i> How can I manage my monthly allowance?
+                        </button>
+                        {% endif %}
+                        <button type="button" class="btn btn-light border text-start p-2 rounded small quick-prompt-btn" data-prompt="How much money can I save in six months?">
+                            <i class="bi bi-arrow-right-short text-success"></i> How much money can I save in six months?
+                        </button>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="small fw-semibold text-muted mb-1">Safety & Accuracy Guarantee</div>
+                        <p class="text-muted" style="font-size: 0.78rem;">
+                            All financial aggregates and totals are calculated with precise backend SQL logic. The AI advisor never fabricates imaginary balances or accounts.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: BUDGET RECOMMENDATIONS -->
+    <div class="tab-pane fade" id="tab-budget" role="tabpanel">
+        <div class="fin-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <div>
+                    <h4 class="fw-bold mb-0">Personalized Budget Recommendations</h4>
+                    <span class="text-muted small">Generated based on your income, expenses, and {{ current_user.financial_mode.title() }} Mode</span>
+                </div>
+                {% if budget_advice.is_fallback %}
+                <span class="badge bg-warning text-dark">Rule-Based Advisor</span>
+                {% else %}
+                <span class="badge bg-success">Gemini AI</span>
+                {% endif %}
+            </div>
+            <div class="p-3 bg-light rounded-3 text-dark" style="white-space: pre-line; line-height: 1.7;">
+                {{ budget_advice.text }}
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('budgets.index') }}" class="btn btn-primary-fin btn-sm">
+                    <i class="bi bi-arrow-right-circle me-1"></i> Go to Budget Planner to apply limits
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: SPENDING FORENSIC ANALYSIS -->
+    <div class="tab-pane fade" id="tab-spending" role="tabpanel">
+        <div class="fin-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <div>
+                    <h4 class="fw-bold mb-0">Spending Forensic & Pattern Detection</h4>
+                    <span class="text-muted small">Identifying spending leaks, top categories, and unusual outflow surges</span>
+                </div>
+                {% if spending_analysis.is_fallback %}
+                <span class="badge bg-warning text-dark">Rule-Based Advisor</span>
+                {% else %}
+                <span class="badge bg-success">Gemini AI</span>
+                {% endif %}
+            </div>
+            <div class="p-3 bg-light rounded-3 text-dark" style="white-space: pre-line; line-height: 1.7;">
+                {{ spending_analysis.text }}
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: SAVINGS STRATEGY -->
+    <div class="tab-pane fade" id="tab-savings" role="tabpanel">
+        <div class="fin-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <div>
+                    <h4 class="fw-bold mb-0">Savings Growth & Emergency Fund Strategy</h4>
+                    <span class="text-muted small">Actionable tactics to grow surplus and fund active goals</span>
+                </div>
+                {% if savings_advice.is_fallback %}
+                <span class="badge bg-warning text-dark">Rule-Based Advisor</span>
+                {% else %}
+                <span class="badge bg-success">Gemini AI</span>
+                {% endif %}
+            </div>
+            <div class="p-3 bg-light rounded-3 text-dark" style="white-space: pre-line; line-height: 1.7;">
+                {{ savings_advice.text }}
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('savings.index') }}" class="btn btn-primary-fin btn-sm">
+                    <i class="bi bi-piggy-bank me-1"></i> View Savings Goals
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: FINANCIAL HEALTH REPORT CARD -->
+    <div class="tab-pane fade" id="tab-health" role="tabpanel">
+        <div class="fin-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <div>
+                    <h4 class="fw-bold mb-0">Monthly Financial Health Executive Summary</h4>
+                    <span class="text-muted small">Comprehensive monthly review and next-month directives</span>
+                </div>
+                {% if health_summary.is_fallback %}
+                <span class="badge bg-warning text-dark">Rule-Based Advisor</span>
+                {% else %}
+                <span class="badge bg-success">Gemini AI</span>
+                {% endif %}
+            </div>
+            <div class="p-4 bg-light rounded-3 text-dark" style="white-space: pre-line; line-height: 1.7;">
+                {{ health_summary.text }}
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <a href="{{ url_for('reports.printable_summary') }}" target="_blank" class="btn btn-outline-fin btn-sm">
+                    <i class="bi bi-printer me-1"></i> Open Printable Statement
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ai_advisor.js') }}"></script>
+{% endblock %}

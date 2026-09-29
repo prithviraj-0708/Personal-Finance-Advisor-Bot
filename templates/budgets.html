@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Smart Budget Planner — Personal Finance Advisor Bot{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Smart Budget Planner</h2>
+        <p class="text-muted mb-0 small">
+            Set category limits, prevent overspending, and generate data-driven budget plans
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary-fin btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addBudgetModal">
+            <i class="bi bi-plus-lg me-1"></i> Set Category Budget
+        </button>
+    </div>
+</div>
+
+<!-- Budget Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card h-100">
+            <div class="stat-header">
+                <span class="stat-title">Total Monthly Budget</span>
+                <div class="stat-icon blue"><i class="bi bi-wallet2"></i></div>
+            </div>
+            <div class="stat-value text-dark">{{ current_user.currency }}{{ "%.2f"|format(metrics.total_budget) }}</div>
+            <div class="stat-subtext text-muted">Allocated Spending Cap</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card h-100">
+            <div class="stat-header">
+                <span class="stat-title">Actual Spent</span>
+                <div class="stat-icon rose"><i class="bi bi-credit-card"></i></div>
+            </div>
+            <div class="stat-value text-danger">{{ current_user.currency }}{{ "%.2f"|format(metrics.total_expenses) }}</div>
+            <div class="stat-subtext text-muted">Current Month Outflow</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card h-100">
+            <div class="stat-header">
+                <span class="stat-title">Remaining Budget</span>
+                <div class="stat-icon green"><i class="bi bi-piggy-bank"></i></div>
+            </div>
+            <div class="stat-value {% if metrics.remaining_budget >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ current_user.currency }}{{ "%.2f"|format(metrics.remaining_budget) }}
+            </div>
+            <div class="stat-subtext text-muted">Safe buffer left</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card h-100">
+            <div class="stat-header">
+                <span class="stat-title">Utilization Rate</span>
+                <div class="stat-icon purple"><i class="bi bi-speedometer2"></i></div>
+            </div>
+            <div class="stat-value text-purple">{{ metrics.budget_utilization }}%</div>
+            <div class="progress-modern mt-2">
+                <div class="progress-bar-fin {% if metrics.budget_utilization >= 100 %}bg-danger{% elif metrics.budget_utilization >= 80 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ metrics.budget_utilization if metrics.budget_utilization <= 100 else 100 }}%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- SMART BUDGET AI GENERATOR CARD -->
+<!-- ========================================== -->
+<div class="fin-card mb-4 border-primary border-opacity-25" style="background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);">
+    <div class="fin-card-header bg-light">
+        <div class="d-flex align-items-center gap-2">
+            <div class="brand-icon" style="width: 32px; height: 32px; font-size: 0.95rem;"><i class="bi bi-magic"></i></div>
+            <div>
+                <h5 class="fw-bold mb-0">Recommended Smart Budget Plan</h5>
+                <div class="text-muted small">
+                    Engineered for your <strong>{{ recommendation.mode.title() }} Mode</strong> based on monthly income ({{ current_user.currency }}{{ "%.2f"|format(recommendation.effective_income) }})
+                </div>
+            </div>
+        </div>
+        <form action="{{ url_for('budgets.apply_recommendations') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="month" value="{{ selected_month }}">
+            <input type="hidden" name="year" value="{{ selected_year }}">
+            <button type="submit" class="btn btn-primary-fin btn-sm shadow-sm" onclick="return confirm('Apply this smart budget to your account for this month?');">
+                <i class="bi bi-check2-circle me-1"></i> Apply Recommendation
+            </button>
+        </form>
+    </div>
+    <div class="fin-card-body">
+        <div class="row g-2 mb-3">
+            <div class="col-sm-4">
+                <div class="p-2 border rounded bg-white small">
+                    <span class="text-muted">Target Monthly Savings (20%):</span>
+                    <strong class="text-success d-block fs-6">{{ current_user.currency }}{{ "%.2f"|format(recommendation.target_savings) }}</strong>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="p-2 border rounded bg-white small">
+                    <span class="text-muted">Total Spendable Cap:</span>
+                    <strong class="text-dark d-block fs-6">{{ current_user.currency }}{{ "%.2f"|format(recommendation.total_spendable_budget) }}</strong>
+                </div>
+            </div>
+            {% if recommendation.weekly_allowance %}
+            <div class="col-sm-4">
+                <div class="p-2 border rounded bg-white small">
+                    <span class="text-muted">Weekly Spending Bucket:</span>
+                    <strong class="text-primary d-block fs-6">{{ current_user.currency }}{{ "%.2f"|format(recommendation.weekly_allowance) }}/wk</strong>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="row g-2">
+            {% for item in recommendation.budgets %}
+            <div class="col-md-3 col-sm-6">
+                <div class="p-2 border rounded bg-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-semibold small">{{ item.category }}</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">{{ item.share_percentage }}% share</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold small text-dark">{{ current_user.currency }}{{ "%.0f"|format(item.monthly_limit) }}</div>
+                        <span class="badge {% if item.is_essential %}bg-light text-dark border{% else %}bg-secondary-subtle text-secondary{% endif %}" style="font-size: 0.65rem;">
+                            {{ 'Essential' if item.is_essential else 'Discretionary' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ACTIVE CATEGORY BUDGETS -->
+<!-- ========================================== -->
+<div class="fin-card">
+    <div class="fin-card-header">
+        <h5 class="fw-bold mb-0">Active Category Limits & Spending</h5>
+        <span class="badge bg-secondary-subtle text-secondary">{{ utilization_details|length }} Categories Tracked</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-fin">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Monthly Limit</th>
+                    <th>Actual Spent</th>
+                    <th>Remaining</th>
+                    <th>Utilization</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in utilization_details %}
+                <tr>
+                    <td>
+                        <span class="fw-semibold text-dark">{{ b.category }}</span>
+                    </td>
+                    <td>
+                        {% if b.limit > 0 %}
+                        {{ current_user.currency }}{{ "%.2f"|format(b.limit) }}
+                        {% else %}
+                        <span class="text-muted small">No Limit Set</span>
+                        {% endif %}
+                    </td>
+                    <td class="fw-bold text-danger">{{ current_user.currency }}{{ "%.2f"|format(b.spent) }}</td>
+                    <td class="fw-bold {% if b.remaining >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ current_user.currency }}{{ "%.2f"|format(b.remaining) }}
+                    </td>
+                    <td style="min-width: 140px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress-modern flex-grow-1">
+                                <div class="progress-bar-fin {% if b.status == 'over' %}bg-danger{% elif b.status == 'warning' %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ b.percentage if b.percentage <= 100 else 100 }}%; height: 100%;"></div>
+                            </div>
+                            <span class="small fw-semibold text-muted">{{ b.percentage }}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if b.status == 'over' %}
+                        <span class="badge badge-soft-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Over Budget</span>
+                        {% elif b.status == 'warning' %}
+                        <span class="badge badge-soft-warning"><i class="bi bi-exclamation-circle-fill me-1"></i>&gt; 80% Used</span>
+                        {% elif b.status == 'safe' %}
+                        <span class="badge badge-soft-success"><i class="bi bi-shield-check me-1"></i>On Track</span>
+                        {% else %}
+                        <span class="badge badge-soft-secondary">Unbudgeted</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if b.id %}
+                        <button class="btn btn-sm btn-light border p-1" type="button" data-bs-toggle="modal" data-bs-target="#editBudgetModal-{{ b.id }}" title="Edit Limit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form action="{{ url_for('budgets.delete', id=b.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Remove budget for {{ b.category }}?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-light border p-1 text-danger" title="Remove"><i class="bi bi-trash"></i></button>
+                        </form>
+                        {% else %}
+                        <!-- Unbudgeted category quick-add -->
+                        <button class="btn btn-sm btn-outline-fin py-0 px-2" type="button" data-bs-toggle="modal" data-bs-target="#addBudgetModal" style="font-size: 0.75rem;">
+                            Set Cap
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% if b.id %}
+                <!-- Edit Budget Modal -->
+                <div class="modal fade" id="editBudgetModal-{{ b.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-sm">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-header border-bottom">
+                                <h6 class="modal-title fw-bold">Edit Limit for {{ b.category }}</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form action="{{ url_for('budgets.edit', id=b.id) }}" method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="modal-body p-3">
+                                    <label class="form-label small fw-semibold">Monthly Limit ({{ current_user.currency }})</label>
+                                    <input type="number" name="monthly_limit" class="form-control form-control-lg" value="{{ b.limit }}" step="1" min="1" required>
+                                </div>
+                                <div class="modal-footer border-top">
+                                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary-fin btn-sm">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-pie-chart fs-2 d-block mb-2"></i>
+                        No budgets found for this month. Click <strong>Apply Recommendation</strong> above or <strong>Set Category Budget</strong> to configure spending caps!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Add / Set Category Budget -->
+<div class="modal fade" id="addBudgetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">Set Category Spending Limit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('budgets.add') }}" method="POST">
+                {{ form.hidden_tag() }}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Category</label>
+                        {{ form.category(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Monthly Spending Limit ({{ current_user.currency }})</label>
+                        {{ form.monthly_limit(class="form-control form-control-lg", placeholder="e.g., 5000", step="1", required=True) }}
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Month</label>
+                            {{ form.month(class="form-select") }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Year</label>
+                            {{ form.year(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary-fin btn-sm">Save Budget Limit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

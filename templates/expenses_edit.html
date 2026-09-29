@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Expense — Personal Finance Advisor Bot{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h3 class="fw-bold mb-0">Edit Expense Entry</h3>
+                <p class="text-muted small mb-0">Update transaction details</p>
+            </div>
+            <a href="{{ url_for('expenses.index') }}" class="btn btn-outline-fin btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Expenses
+            </a>
+        </div>
+
+        <div class="fin-card p-4">
+            <form action="{{ url_for('expenses.edit', id=expense.id) }}" method="POST">
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="amount">Amount ({{ current_user.currency }})</label>
+                    {{ form.amount(class="form-control form-control-lg", step="0.01", required=True) }}
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="category">Category</label>
+                        {{ form.category(class="form-select") }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="payment_method">Payment Method</label>
+                        {{ form.payment_method(class="form-select") }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="description">Merchant / Description</label>
+                    {{ form.description(class="form-control", required=True) }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="date">Date</label>
+                    {{ form.date(class="form-control") }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="notes">Optional Notes</label>
+                    {{ form.notes(class="form-control", rows="2") }}
+                </div>
+
+                {% if current_user.financial_mode == 'freelancer' %}
+                <div class="form-check mb-4">
+                    {{ form.is_work_related(class="form-check-input") }}
+                    <label class="form-check-label small text-muted" for="is_work_related">Work / Business Expense (Tax Deductible)</label>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('expenses.index') }}" class="btn btn-light btn-sm">Cancel</a>
+                    <button type="submit" class="btn btn-primary-fin btn-sm">Update Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Personal Finance Advisor Bot{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Financial Overview</h2>
+        <p class="text-muted mb-0 small">
+            Monitoring performance for <span class="fw-semibold text-dark">{{ metrics.month_name }}</span>
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('income.index') }}" class="btn btn-outline-fin btn-sm">
+            <i class="bi bi-plus-circle text-success me-1"></i> Add Income
+        </a>
+        <a href="{{ url_for('expenses.index') }}" class="btn btn-primary-fin btn-sm">
+            <i class="bi bi-dash-circle me-1"></i> Add Expense
+        </a>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- SPECIALIZED MODE BANNERS & WIDGETS -->
+<!-- ========================================== -->
+{% if current_user.financial_mode == 'student' %}
+<div class="mode-banner student shadow-sm">
+    <div class="d-flex align-items-center gap-3">
+        <div class="fs-2 text-warning"><i class="bi bi-mortarboard"></i></div>
+        <div>
+            <div class="fw-bold fs-6">College Student Allowance Tracker</div>
+            <div class="small">
+                Allowance: <strong>{{ current_user.currency }}{{ student_context.monthly_allowance | default(0) }}</strong> | 
+                Weekly Budget: <strong>{{ current_user.currency }}{{ student_context.weekly_allowance | default(0) }}</strong> | 
+                Days Remaining: <strong>{{ student_context.days_left_in_month }} days</strong>
+            </div>
+        </div>
+    </div>
+    <div class="text-end">
+        <div class="small text-muted">Remaining Allowance</div>
+        <div class="fw-bold fs-5 text-dark">{{ current_user.currency }}{{ student_context.remaining_allowance | default(0) }}</div>
+    </div>
+</div>
+{% elif current_user.financial_mode == 'freelancer' %}
+<div class="mode-banner freelancer shadow-sm">
+    <div class="d-flex align-items-center gap-3">
+        <div class="fs-2 text-purple"><i class="bi bi-laptop"></i></div>
+        <div>
+            <div class="fw-bold fs-6">Freelancer Variable Income Control</div>
+            <div class="small">
+                Tax Buffer (20%): <strong>{{ current_user.currency }}{{ freelancer_context.tax_buffer_recommended }}</strong> | 
+                Work-Related Expenses: <strong>{{ current_user.currency }}{{ freelancer_context.work_expenses_total }}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="text-end">
+        <div class="small text-muted">Net Operating Income</div>
+        <div class="fw-bold fs-5 text-dark">{{ current_user.currency }}{{ freelancer_context.net_operating_income }}</div>
+    </div>
+</div>
+{% elif current_user.financial_mode == 'household' %}
+<div class="mode-banner household shadow-sm">
+    <div class="d-flex align-items-center gap-3">
+        <div class="fs-2 text-success"><i class="bi bi-house-door"></i></div>
+        <div>
+            <div class="fw-bold fs-6">Household Shared Finances</div>
+            <div class="small">
+                Essential Household Bills: <strong>{{ current_user.currency }}{{ household_context.household_essentials_spent }}</strong> ({{ household_context.essential_share_pct }}% of total) | 
+                Discretionary: <strong>{{ current_user.currency }}{{ household_context.discretionary_spent }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ========================================== -->
+<!-- 5 STATS CARDS -->
+<!-- ========================================== -->
+<div class="row g-3 mb-4">
+    <!-- Total Monthly Income -->
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card h-100">
+            <div>
+                <div class="stat-header">
+                    <span class="stat-title">Monthly Income</span>
+                    <div class="stat-icon green"><i class="bi bi-arrow-up-right"></i></div>
+                </div>
+                <div class="stat-value text-success">{{ current_user.currency }}{{ "%.2f"|format(metrics.total_income) }}</div>
+            </div>
+            <div class="stat-subtext">
+                <i class="bi bi-check-circle-fill text-success"></i> Recorded Inflow
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Monthly Expenses -->
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card h-100">
+            <div>
+                <div class="stat-header">
+                    <span class="stat-title">Total Expenses</span>
+                    <div class="stat-icon rose"><i class="bi bi-arrow-down-left"></i></div>
+                </div>
+                <div class="stat-value text-danger">{{ current_user.currency }}{{ "%.2f"|format(metrics.total_expenses) }}</div>
+            </div>
+            <div class="stat-subtext">
+                <i class="bi bi-calendar3"></i> Current Month
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Net Savings -->
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card h-100">
+            <div>
+                <div class="stat-header">
+                    <span class="stat-title">Net Savings</span>
+                    <div class="stat-icon blue"><i class="bi bi-wallet-fill"></i></div>
+                </div>
+                <div class="stat-value {% if metrics.net_savings >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    {{ current_user.currency }}{{ "%.2f"|format(metrics.net_savings) }}
+                </div>
+            </div>
+            <div class="stat-subtext">
+                Income minus expenses
+            </div>
+        </div>
+    </div>
+
+    <!-- Remaining Budget -->
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card h-100">
+            <div>
+                <div class="stat-header">
+                    <span class="stat-title">Remaining Budget</span>
+                    <div class="stat-icon amber"><i class="bi bi-pie-chart-fill"></i></div>
+                </div>
+                <div class="stat-value {% if metrics.remaining_budget >= 0 %}text-dark{% else %}text-danger{% endif %}">
+                    {{ current_user.currency }}{{ "%.2f"|format(metrics.remaining_budget) }}
+                </div>
+            </div>
+            <div class="stat-subtext">
+                Budget limit: {{ current_user.currency }}{{ "%.2f"|format(metrics.total_budget) }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Savings Rate -->
+    <div class="col-sm-6 col-xl">
+        <div class="stat-card h-100">
+            <div>
+                <div class="stat-header">
+                    <span class="stat-title">Savings Rate</span>
+                    <div class="stat-icon purple"><i class="bi bi-percent"></i></div>
+                </div>
+                <div class="stat-value text-purple">{{ metrics.savings_rate }}%</div>
+            </div>
+            <div class="progress-modern mt-2">
+                <div class="progress-bar-fin bg-success" style="width: {{ metrics.savings_rate if metrics.savings_rate > 0 else 0 }}%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- CHARTS & AI INSIGHT SECTION -->
+<!-- ========================================== -->
+<div class="row g-4 mb-4">
+    <!-- 6-Month Income vs Expense Trend -->
+    <div class="col-lg-8">
+        <div class="fin-card h-100">
+            <div class="fin-card-header">
+                <div>
+                    <h5 class="fw-bold mb-0">Income vs. Expense Trend</h5>
+                    <div class="text-muted small">6-month comparison of inflows and outflows</div>
+                </div>
+                <a href="{{ url_for('reports.index') }}" class="btn btn-sm btn-outline-fin">Full Reports</a>
+            </div>
+            <div class="fin-card-body">
+                <div style="height: 300px;">
+                    <canvas id="incomeExpenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown Doughnut -->
+    <div class="col-lg-4">
+        <div class="fin-card h-100">
+            <div class="fin-card-header">
+                <div>
+                    <h5 class="fw-bold mb-0">Expense Breakdown</h5>
+                    <div class="text-muted small">By category for this month</div>
+                </div>
+                <a href="{{ url_for('expenses.index') }}" class="text-muted small"><i class="bi bi-box-arrow-up-right"></i></a>
+            </div>
+            <div class="fin-card-body d-flex flex-column align-items-center justify-content-center">
+                <div style="height: 250px; width: 100%;">
+                    <canvas id="categoryDoughnutChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Quick Insight Banner -->
+<div class="card border-0 mb-4 shadow-sm" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border-radius: var(--radius-md);">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div class="d-flex align-items-start gap-3">
+                <div class="brand-icon fs-4 p-3 bg-success rounded-3"><i class="bi bi-stars"></i></div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h5 class="fw-bold text-white mb-0">AI Advisor Spending Insights</h5>
+                        {% if quick_insight.is_fallback %}
+                        <span class="badge bg-warning text-dark small">Rule-Based Analysis</span>
+                        {% else %}
+                        <span class="badge bg-success small">Gemini AI Active</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-light opacity-75 small" style="white-space: pre-line;">{{ quick_insight.text[:300] }}...</div>
+                </div>
+            </div>
+            <a href="{{ url_for('ai_advisor.index') }}" class="btn btn-primary-fin btn-sm flex-shrink-0">
+                <i class="bi bi-chat-dots me-1"></i> Open AI Advisor Hub
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- RECENT TRANSACTIONS & BUDGET UTILIZATION -->
+<!-- ========================================== -->
+<div class="row g-4 mb-4">
+    <!-- Recent Transactions -->
+    <div class="col-lg-7">
+        <div class="fin-card h-100">
+            <div class="fin-card-header">
+                <div>
+                    <h5 class="fw-bold mb-0">Recent Transactions</h5>
+                    <div class="text-muted small">Latest financial entries recorded</div>
+                </div>
+                <a href="{{ url_for('expenses.transactions') }}" class="btn btn-sm btn-outline-fin">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-fin">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Date</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in recent_transactions %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle p-1 d-flex align-items-center justify-content-center {% if t.type == 'income' %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}" style="width: 28px; height: 28px;">
+                                        <i class="bi {% if t.type == 'income' %}bi-arrow-down-left{% else %}bi-arrow-up-right{% endif %}" style="font-size: 0.85rem;"></i>
+                                    </div>
+                                    <span class="fw-medium text-dark">{{ t.description }}</span>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-soft badge-soft-{{ t.category | badge_color }}">{{ t.category }}</span></td>
+                            <td class="text-muted small">{{ t.date.strftime('%d %b') }}</td>
+                            <td class="text-end fw-bold {% if t.type == 'income' %}text-success{% else %}text-dark{% endif %}">
+                                {% if t.type == 'income' %}+{% else %}-{% endif %}{{ current_user.currency }}{{ "%.2f"|format(t.amount) }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                No transactions recorded yet. Click <strong>Add Income</strong> or <strong>Add Expense</strong> to get started!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Utilization Progress -->
+    <div class="col-lg-5">
+        <div class="fin-card h-100">
+            <div class="fin-card-header">
+                <div>
+                    <h5 class="fw-bold mb-0">Budget Utilization</h5>
+                    <div class="text-muted small">Category limits vs actual spending</div>
+                </div>
+                <a href="{{ url_for('budgets.index') }}" class="btn btn-sm btn-outline-fin">Planner</a>
+            </div>
+            <div class="fin-card-body">
+                {% for b in budget_details[:5] %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-semibold small">{{ b.category }}</span>
+                        <span class="small text-muted">
+                            {{ current_user.currency }}{{ "%.0f"|format(b.spent) }} / {{ current_user.currency }}{{ "%.0f"|format(b.limit) }}
+                            <strong class="{% if b.percentage >= 100 %}text-danger{% elif b.percentage >= 80 %}text-warning{% else %}text-success{% endif %}">
+                                ({{ b.percentage }}%)
+                            </strong>
+                        </span>
+                    </div>
+                    <div class="progress-modern">
+                        <div class="progress-bar-fin {% if b.percentage >= 100 %}bg-danger{% elif b.percentage >= 80 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ b.percentage if b.percentage <= 100 else 100 }}%; height: 100%;"></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-sliders fs-2 d-block mb-2"></i>
+                    No budgets configured for this month.
+                    <div class="mt-2">
+                        <a href="{{ url_for('budgets.index') }}" class="btn btn-sm btn-primary-fin">Generate Smart Budget</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- SAVINGS GOALS PREVIEW -->
+<!-- ========================================== -->
+{% if savings_goals %}
+<div class="fin-card mb-4">
+    <div class="fin-card-header">
+        <div>
+            <h5 class="fw-bold mb-0">Active Savings Goals</h5>
+            <div class="text-muted small">Track target milestones and monthly requirements</div>
+        </div>
+        <a href="{{ url_for('savings.index') }}" class="btn btn-sm btn-outline-fin">Manage Goals</a>
+    </div>
+    <div class="fin-card-body">
+        <div class="row g-3">
+            {% for g in savings_goals %}
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="fw-bold text-dark">{{ g.name }}</span>
+                        <span class="badge bg-success small">{{ g.progress_percentage }}%</span>
+                    </div>
+                    <div class="progress-modern mb-2">
+                        <div class="progress-bar-fin bg-success" style="width: {{ g.progress_percentage }}%; height: 100%;"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>Saved: {{ current_user.currency }}{{ "%.0f"|format(g.current_amount) }}</span>
+                        <span>Target: {{ current_user.currency }}{{ "%.0f"|format(g.target_amount) }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const currency = '{{ current_user.currency }}';
+
+    // 1. Render Income vs Expense Trend Chart
+    const historyLabels = {{ history | map(attribute='label') | list | tojson }};
+    const incomeHistory = {{ history | map(attribute='income') | list | tojson }};
+    const expenseHistory = {{ history | map(attribute='expense') | list | tojson }};
+    renderIncomeExpenseChart('incomeExpenseChart', historyLabels, incomeHistory, expenseHistory, currency);
+
+    // 2. Render Category Doughnut Chart
+    const catLabels = {{ category_breakdown | map(attribute='category') | list | tojson }};
+    const catAmounts = {{ category_breakdown | map(attribute='amount') | list | tojson }};
+    renderCategoryDoughnut('categoryDoughnutChart', catLabels, catAmounts, currency);
+});
+</script>
+{% endblock %}

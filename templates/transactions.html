@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions Ledger — Personal Finance Advisor Bot{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Transaction Ledger</h2>
+        <p class="text-muted mb-0 small">Unified history of all incomes and expenses with search, filtering, and sorting</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('reports.export_transactions') }}" class="btn btn-outline-fin btn-sm">
+            <i class="bi bi-download me-1"></i> Export CSV
+        </a>
+    </div>
+</div>
+
+<!-- Filter & Search Toolbar -->
+<div class="fin-card p-3 mb-4">
+    <form method="GET" action="{{ url_for('expenses.transactions') }}" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted">Search Transactions</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control" placeholder="Search merchant, source..." value="{{ search_query }}">
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-2">
+            <label class="form-label small fw-semibold text-muted">Type</label>
+            <select name="type" class="form-select form-select-sm">
+                <option value="" {% if not txn_type %}selected{% endif %}>All Types</option>
+                <option value="income" {% if txn_type == 'income' %}selected{% endif %}>Income (+)</option>
+                <option value="expense" {% if txn_type == 'expense' %}selected{% endif %}>Expense (-)</option>
+            </select>
+        </div>
+
+        <div class="col-sm-6 col-md-2">
+            <label class="form-label small fw-semibold text-muted">Sort By</label>
+            <select name="sort" class="form-select form-select-sm">
+                <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Date: Newest First</option>
+                <option value="date_asc" {% if sort_by == 'date_asc' %}selected{% endif %}>Date: Oldest First</option>
+                <option value="amount_desc" {% if sort_by == 'amount_desc' %}selected{% endif %}>Amount: Highest First</option>
+                <option value="amount_asc" {% if sort_by == 'amount_asc' %}selected{% endif %}>Amount: Lowest First</option>
+            </select>
+        </div>
+
+        <div class="col-sm-6 col-md-2">
+            <label class="form-label small fw-semibold text-muted">Start Date</label>
+            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
+        </div>
+
+        <div class="col-sm-6 col-md-2">
+            <label class="form-label small fw-semibold text-muted">End Date</label>
+            <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
+        </div>
+
+        <div class="col-md-1 d-flex gap-1">
+            <button type="submit" class="btn btn-primary-fin btn-sm w-100" title="Apply filters">Go</button>
+            <a href="{{ url_for('expenses.transactions') }}" class="btn btn-light border btn-sm" title="Clear filters"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</div>
+
+<!-- Filtered Totals Ribbon -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center shadow-sm">
+            <div>
+                <span class="text-muted small fw-semibold">FILTERED INFLOW</span>
+                <div class="fs-5 fw-bold text-success">+{{ current_user.currency }}{{ "%.2f"|format(total_inc) }}</div>
+            </div>
+            <div class="stat-icon green"><i class="bi bi-arrow-down-left"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center shadow-sm">
+            <div>
+                <span class="text-muted small fw-semibold">FILTERED OUTFLOW</span>
+                <div class="fs-5 fw-bold text-danger">-{{ current_user.currency }}{{ "%.2f"|format(total_exp) }}</div>
+            </div>
+            <div class="stat-icon rose"><i class="bi bi-arrow-up-right"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center shadow-sm">
+            <div>
+                <span class="text-muted small fw-semibold">NET CASHFLOW</span>
+                <div class="fs-5 fw-bold {% if net_flow >= 0 %}text-primary{% else %}text-danger{% endif %}">
+                    {{ current_user.currency }}{{ "%.2f"|format(net_flow) }}
+                </div>
+            </div>
+            <div class="stat-icon blue"><i class="bi bi-wallet2"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="fin-card">
+    <div class="fin-card-header">
+        <h5 class="fw-bold mb-0">Transactions ({{ transactions|length }})</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-fin">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Payment Method</th>
+                    <th class="text-end">Amount</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td>
+                        {% if t.type == 'income' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                            <i class="bi bi-arrow-down-left me-1"></i>Income
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                            <i class="bi bi-arrow-up-right me-1"></i>Expense
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">{{ t.date.strftime('%d %b %Y') }}</td>
+                    <td>
+                        <span class="fw-medium text-dark">{{ t.description }}</span>
+                        {% if t.notes %}
+                        <div class="text-muted small" style="font-size: 0.76rem;">{{ t.notes }}</div>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge badge-soft badge-soft-{{ t.category | badge_color }}">{{ t.category }}</span></td>
+                    <td class="text-muted small">{{ t.payment_method }}</td>
+                    <td class="text-end fw-bold {% if t.type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                        {% if t.type == 'income' %}+{% else %}-{% endif %}{{ current_user.currency }}{{ "%.2f"|format(t.amount) }}
+                    </td>
+                    <td class="text-end">
+                        {% if t.type == 'income' %}
+                        <a href="{{ url_for('income.edit', id=t.id) }}" class="btn btn-sm btn-light border p-1" title="Edit"><i class="bi bi-pencil"></i></a>
+                        {% else %}
+                        <a href="{{ url_for('expenses.edit', id=t.id) }}" class="btn btn-sm btn-light border p-1" title="Edit"><i class="bi bi-pencil"></i></a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        No transactions matched your search filters.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Personal Finance Advisor Bot — AI-Powered Personal Finance Management{% endblock %}
+
+{% block guest_content %}
+<div class="landing-wrapper">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--color-bg-dark); border-bottom: 1px solid rgba(255,255,255,0.08);">
+        <div class="container py-2">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+                <div class="brand-icon"><i class="bi bi-wallet2"></i></div>
+                <span class="fw-bold fs-4">FinanceBot<span class="text-success">.ai</span></span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-sm px-3">Sign In</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary-fin btn-sm px-3">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="py-5" style="background: linear-gradient(180deg, #0b1329 0%, #0f172a 100%); color: #ffffff;">
+        <div class="container py-5 text-center">
+            <span class="badge rounded-pill bg-success-subtle text-success px-3 py-2 mb-3 fw-semibold border border-success-subtle">
+                <i class="bi bi-stars me-1"></i> Powered by Google Gemini AI & Rule-Based Intelligence
+            </span>
+            <h1 class="display-4 fw-extrabold mb-3 text-white">Smart Personal Finance,<br><span style="color: var(--color-primary);">Supercharged with AI</span></h1>
+            <p class="lead text-light opacity-75 mx-auto mb-4" style="max-width: 680px;">
+                Track every rupee, generate personalized budgets with precision, track your savings goals, and ask questions to your 24/7 AI financial advisor.
+            </p>
+            <div class="d-flex justify-content-center gap-3 mb-5">
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary-fin btn-lg px-4 shadow">
+                    <i class="bi bi-person-plus me-2"></i>Create Free Account
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg px-4">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                </a>
+            </div>
+
+            <!-- Dashboard Preview Mockup Card -->
+            <div class="mx-auto shadow-lg rounded-4 p-3 bg-dark border border-secondary border-opacity-25" style="max-width: 900px;">
+                <div class="row g-3 text-start">
+                    <div class="col-md-3">
+                        <div class="p-3 bg-secondary bg-opacity-10 rounded-3 border border-secondary border-opacity-25">
+                            <div class="text-muted small">MONTHLY INCOME</div>
+                            <div class="fs-4 fw-bold text-success">₹57,000.00</div>
+                            <div class="small text-muted"><i class="bi bi-arrow-up-right text-success"></i> +12% vs last mo</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-secondary bg-opacity-10 rounded-3 border border-secondary border-opacity-25">
+                            <div class="text-muted small">MONTHLY EXPENSES</div>
+                            <div class="fs-4 fw-bold text-danger">₹31,400.00</div>
+                            <div class="small text-muted">55% of income</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-secondary bg-opacity-10 rounded-3 border border-secondary border-opacity-25">
+                            <div class="text-muted small">NET SAVINGS</div>
+                            <div class="fs-4 fw-bold text-primary">₹25,600.00</div>
+                            <div class="small text-muted">Savings Rate: 44.9%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-secondary bg-opacity-10 rounded-3 border border-secondary border-opacity-25">
+                            <div class="text-muted small">AI STATUS</div>
+                            <div class="fs-5 fw-bold text-warning"><i class="bi bi-shield-check text-success"></i> Gemini Active</div>
+                            <div class="small text-muted">Fallback Mode Ready</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 4 Specialized Modes Section -->
+    <section class="py-5 bg-white border-bottom">
+        <div class="container py-4">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Engineered for Your Specific Lifestyle</h2>
+                <p class="text-muted">Choose your mode or switch anytime with one click.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="card h-100 border p-3 rounded-4 shadow-sm hover-lift">
+                        <div class="text-primary fs-2 mb-2"><i class="bi bi-mortarboard-fill"></i></div>
+                        <h5 class="fw-bold">College Student Mode</h5>
+                        <p class="text-muted small">Weekly allowance breakdown, campus canteen & travel tracking, and pocket-friendly budgets.</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100 border p-3 rounded-4 shadow-sm hover-lift">
+                        <div class="text-warning fs-2 mb-2"><i class="bi bi-laptop"></i></div>
+                        <h5 class="fw-bold">Freelancer Mode</h5>
+                        <p class="text-muted small">Handle variable project payouts, track work-related deductions, and maintain emergency buffers.</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100 border p-3 rounded-4 shadow-sm hover-lift">
+                        <div class="text-success fs-2 mb-2"><i class="bi bi-house-door-fill"></i></div>
+                        <h5 class="fw-bold">Household Mode</h5>
+                        <p class="text-muted small">Manage family groceries, rent, utilities, and joint savings targets under one synchronized roof.</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100 border p-3 rounded-4 shadow-sm hover-lift">
+                        <div class="text-info fs-2 mb-2"><i class="bi bi-briefcase-fill"></i></div>
+                        <h5 class="fw-bold">Standard Mode</h5>
+                        <p class="text-muted small">The classic 50/30/20 wealth framework with automatic overspending alerts and custom category limits.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Features Grid -->
+    <section class="py-5" style="background-color: var(--color-body-bg);">
+        <div class="container py-4">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Complete Financial Intelligence</h2>
+                <p class="text-muted">Everything you need to master your money in one cohesive dashboard.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="fin-card p-4 h-100">
+                        <div class="stat-icon green mb-3"><i class="bi bi-chat-dots-fill"></i></div>
+                        <h5 class="fw-bold">Conversational AI Advisor</h5>
+                        <p class="text-muted small">Ask questions like "Where is most of my money going?" or "How can I save ₹2,000 next month?" Answered with your real ledger data.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fin-card p-4 h-100">
+                        <div class="stat-icon blue mb-3"><i class="bi bi-sliders"></i></div>
+                        <h5 class="fw-bold">Smart Personalized Budgets</h5>
+                        <p class="text-muted small">Dynamic generation based on your real income and history. Real-time alerts when you cross 80% or 100% of limits.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fin-card p-4 h-100">
+                        <div class="stat-icon amber mb-3"><i class="bi bi-bullseye"></i></div>
+                        <h5 class="fw-bold">Targeted Savings Goals</h5>
+                        <p class="text-muted small">Emergency funds, gadgets, or travel. Calculates exact monthly deposits needed to reach your targets on time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-4 border-top text-center text-muted small bg-white">
+        <div class="container">
+            <p class="mb-0">Personal Finance Advisor Bot — AI-Powered Personal Financial Management System &copy; 2026</p>
+        </div>
+    </footer>
+</div>
+{% endblock %}
